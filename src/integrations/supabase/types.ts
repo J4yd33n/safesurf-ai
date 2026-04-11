@@ -14,7 +14,146 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      dataset_entries: {
+        Row: {
+          created_at: string
+          dataset_id: string
+          id: string
+          label: string
+          source: string | null
+          url: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dataset_id: string
+          id?: string
+          label?: string
+          source?: string | null
+          url: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dataset_id?: string
+          id?: string
+          label?: string
+          source?: string | null
+          url?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dataset_entries_dataset_id_fkey"
+            columns: ["dataset_id"]
+            isOneToOne: false
+            referencedRelation: "datasets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      datasets: {
+        Row: {
+          benign_count: number
+          created_at: string
+          description: string | null
+          file_name: string | null
+          id: string
+          malicious_count: number
+          name: string
+          total_entries: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          benign_count?: number
+          created_at?: string
+          description?: string | null
+          file_name?: string | null
+          id?: string
+          malicious_count?: number
+          name: string
+          total_entries?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          benign_count?: number
+          created_at?: string
+          description?: string | null
+          file_name?: string | null
+          id?: string
+          malicious_count?: number
+          name?: string
+          total_entries?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      scan_results: {
+        Row: {
+          analysis_time_ms: number
+          created_at: string
+          id: string
+          indicators: Json
+          risk_level: string
+          risk_score: number
+          url: string
+          url_features: Json
+          user_id: string
+        }
+        Insert: {
+          analysis_time_ms?: number
+          created_at?: string
+          id?: string
+          indicators?: Json
+          risk_level?: string
+          risk_score?: number
+          url: string
+          url_features?: Json
+          user_id: string
+        }
+        Update: {
+          analysis_time_ms?: number
+          created_at?: string
+          id?: string
+          indicators?: Json
+          risk_level?: string
+          risk_score?: number
+          url?: string
+          url_features?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
