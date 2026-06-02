@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { Search, Loader2, Shield } from "lucide-react";
-import { analyzeURL, type AnalysisResult } from "@/lib/phishing-analyzer";
+import { analyzeURL, fetchWhois, type AnalysisResult } from "@/lib/phishing-analyzer";
 import { RiskGauge } from "@/components/RiskGauge";
 import { IndicatorList } from "@/components/IndicatorList";
 import { URLFeaturesPanel } from "@/components/URLFeaturesPanel";
@@ -22,6 +22,23 @@ export default function Index() {
 
     setTimeout(async () => {
       const analysis = analyzeURL(url.trim());
+      // WHOIS enrichment (non-blocking failure)
+      const supaUrl = import.meta.env.VITE_SUPABASE_URL as string;
+      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+      const whois = await fetchWhois(
+        analysis.urlFeatures.domain,
+        `${supaUrl}/functions/v1`,
+        anonKey,
+      );
+      if (whois) {
+        analysis.whois = whois;
+        // Penalize very young domains
+        if (whois.isYoung) {
+          analysis.riskScore = Math.min(100, analysis.riskScore + 15);
+          if (analysis.riskScore >= 60) analysis.riskLevel = "dangerous";
+          else if (analysis.riskScore >= 30) analysis.riskLevel = "suspicious";
+        }
+      }
       setResult(analysis);
       setHistory((prev) => [analysis, ...prev].slice(0, 50));
       setScanning(false);
