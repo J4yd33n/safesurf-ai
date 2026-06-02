@@ -134,6 +134,45 @@ export default function Index() {
               />
             </div>
             {result && <URLFeaturesPanel features={result.urlFeatures} />}
+            {result && (result.mlScore !== undefined || result.whois) && (
+              <div className="space-y-2">
+                <h3 className="font-mono text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                  ML Model & WHOIS
+                </h3>
+                <div className="rounded-lg border border-border bg-card/50 p-3 font-mono text-xs space-y-2">
+                  {result.mlScore !== undefined && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">RF Probability</span>
+                        <span className={result.mlScore >= 0.6 ? "text-destructive" : result.mlScore >= 0.3 ? "text-warning" : "text-safe"}>
+                          {(result.mlScore * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">ML Verdict</span>
+                        <span className="uppercase text-foreground">{result.mlPrediction}</span>
+                      </div>
+                    </>
+                  )}
+                  {result.whois && (
+                    <>
+                      <div className="border-t border-border pt-2 flex justify-between">
+                        <span className="text-muted-foreground">Domain Age</span>
+                        <span className={result.whois.isYoung ? "text-warning" : "text-foreground"}>
+                          {result.whois.ageDays !== null ? `${result.whois.ageDays} days` : "unknown"}
+                        </span>
+                      </div>
+                      {result.whois.registrar && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Registrar</span>
+                          <span className="text-foreground truncate ml-2">{result.whois.registrar}</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
           <div className="lg:col-span-2">
             {result && <IndicatorList indicators={result.indicators} />}
