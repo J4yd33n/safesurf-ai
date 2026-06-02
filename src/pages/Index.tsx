@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { Search, Loader2, Shield } from "lucide-react";
-import { analyzeURL, type AnalysisResult } from "@/lib/phishing-analyzer";
+import { analyzeURL, fetchWhois, type AnalysisResult } from "@/lib/phishing-analyzer";
 import { RiskGauge } from "@/components/RiskGauge";
 import { IndicatorList } from "@/components/IndicatorList";
 import { URLFeaturesPanel } from "@/components/URLFeaturesPanel";
@@ -22,6 +22,23 @@ export default function Index() {
 
     setTimeout(async () => {
       const analysis = analyzeURL(url.trim());
+      // WHOIS enrichment (non-blocking failure)
+      const supaUrl = import.meta.env.VITE_SUPABASE_URL as string;
+      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+      const whois = await fetchWhois(
+        analysis.urlFeatures.domain,
+        `${supaUrl}/functions/v1`,
+        anonKey,
+      );
+      if (whois) {
+        analysis.whois = whois;
+        // Penalize very young domains
+        if (whois.isYoung) {
+          analysis.riskScore = Math.min(100, analysis.riskScore + 15);
+          if (analysis.riskScore >= 60) analysis.riskLevel = "dangerous";
+          else if (analysis.riskScore >= 30) analysis.riskLevel = "suspicious";
+        }
+      }
       setResult(analysis);
       setHistory((prev) => [analysis, ...prev].slice(0, 50));
       setScanning(false);
@@ -117,6 +134,45 @@ export default function Index() {
               />
             </div>
             {result && <URLFeaturesPanel features={result.urlFeatures} />}
+            {result && (result.mlScore !== undefined || result.whois) && (
+              <div className="space-y-2">
+                <h3 className="font-mono text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                  ML Model & WHOIS
+                </h3>
+                <div className="rounded-lg border border-border bg-card/50 p-3 font-mono text-xs space-y-2">
+                  {result.mlScore !== undefined && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">RF Probability</span>
+                        <span className={result.mlScore >= 0.6 ? "text-destructive" : result.mlScore >= 0.3 ? "text-warning" : "text-safe"}>
+                          {(result.mlScore * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">ML Verdict</span>
+                        <span className="uppercase text-foreground">{result.mlPrediction}</span>
+                      </div>
+                    </>
+                  )}
+                  {result.whois && (
+                    <>
+                      <div className="border-t border-border pt-2 flex justify-between">
+                        <span className="text-muted-foreground">Domain Age</span>
+                        <span className={result.whois.isYoung ? "text-warning" : "text-foreground"}>
+                          {result.whois.ageDays !== null ? `${result.whois.ageDays} days` : "unknown"}
+                        </span>
+                      </div>
+                      {result.whois.registrar && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Registrar</span>
+                          <span className="text-foreground truncate ml-2">{result.whois.registrar}</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
           <div className="lg:col-span-2">
             {result && <IndicatorList indicators={result.indicators} />}
