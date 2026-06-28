@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Shield, Search, BarChart3, Database, LogOut, User, FileText, Flag } from "lucide-react";
+import { Shield, Search, BarChart3, Database, LogOut, User, FileText, Flag, Rocket } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 const navItems = [
@@ -8,6 +8,7 @@ const navItems = [
   { path: "/datasets", label: "Datasets", icon: Database },
   { path: "/bulk-scan", label: "Bulk Scan", icon: FileText },
   { path: "/community", label: "Community", icon: Flag },
+  { path: "/launch", label: "Launch", icon: Rocket },
 ];
 
 export function Navbar() {

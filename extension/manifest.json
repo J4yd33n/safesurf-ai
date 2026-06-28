@@ -2,10 +2,14 @@
   "manifest_version": 3,
   "name": "PhishGuard — Real-Time Phishing Protection",
   "version": "1.0.0",
-  "description": "Scans every URL you visit using PhishGuard's heuristic + ML model and warns you about phishing attempts.",
-  "permissions": ["activeTab", "storage", "tabs", "webNavigation", "notifications"],
-  "host_permissions": ["<all_urls>"],
+  "description": "Scans every URL you visit with a heuristic + Random Forest model and warns you before you land on a phishing page.",
+  "minimum_chrome_version": "114",
+  "author": "PhishGuard",
+  "permissions": ["activeTab", "storage", "webNavigation", "notifications"],
   "action": { "default_popup": "popup.html", "default_title": "PhishGuard" },
   "background": { "service_worker": "background.js" },
-  "icons": { "48": "icon.png", "128": "icon.png" }
+  "icons": { "16": "icon.png", "48": "icon.png", "128": "icon.png" },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
 }
