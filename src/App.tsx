@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import Datasets from "./pages/Datasets";
 import BulkScan from "./pages/BulkScan";
 import Community from "./pages/Community";
+import Launch from "./pages/Launch";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +38,7 @@ const App = () => (
                       <Route path="/datasets" element={<Datasets />} />
                       <Route path="/bulk-scan" element={<BulkScan />} />
                       <Route path="/community" element={<Community />} />
+                      <Route path="/launch" element={<Launch />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </div>
