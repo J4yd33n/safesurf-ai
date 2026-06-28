@@ -5,7 +5,7 @@
   "description": "Scans every URL you visit with a heuristic + Random Forest model and warns you before you land on a phishing page.",
   "minimum_chrome_version": "114",
   "author": "PhishGuard",
-  "permissions": ["storage", "webNavigation", "notifications"],
+  "permissions": ["activeTab", "storage", "webNavigation", "notifications"],
   "action": { "default_popup": "popup.html", "default_title": "PhishGuard" },
   "background": { "service_worker": "background.js" },
   "icons": { "16": "icon.png", "48": "icon.png", "128": "icon.png" },
