@@ -67,6 +67,43 @@ const LEGITIMATE_DOMAINS = [
   "ebay.com", "whatsapp.com", "zoom.us", "office.com", "live.com",
 ];
 
+// Free hosting providers commonly abused for phishing campaigns
+const FREE_HOSTING_PROVIDERS = [
+  "firebaseapp.com", "web.app", "netlify.app", "vercel.app", "pages.dev",
+  "github.io", "glitch.me", "repl.co", "replit.dev", "herokuapp.com",
+  "surge.sh", "weebly.com", "wixsite.com", "blogspot.com", "000webhostapp.com",
+  "ngrok.io", "ngrok-free.app", "onrender.com", "cloudfront.net",
+];
+
+function levenshtein(a: string, b: string): number {
+  if (a === b) return 0;
+  const m = a.length, n = b.length;
+  if (!m) return n; if (!n) return m;
+  let prev = new Array(n + 1);
+  for (let j = 0; j <= n; j++) prev[j] = j;
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      cur[j] = Math.min(cur[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
+    }
+    prev = cur;
+  }
+  return prev[n];
+}
+
+function looksLikeBrand(label: string): string | null {
+  for (const d of LEGITIMATE_DOMAINS) {
+    const brand = d.split(".")[0];
+    if (label === brand) continue;
+    const dist = levenshtein(label, brand);
+    if (brand.length >= 5 && dist > 0 && dist <= 2) return brand;
+    if (label.includes(brand) && label !== brand) return brand;
+    if (brand.includes(label) && label !== brand && label.length >= 4) return brand;
+  }
+  return null;
+}
+
 function calculateEntropy(str: string): number {
   const freq: Record<string, number> = {};
   for (const ch of str) freq[ch] = (freq[ch] || 0) + 1;
@@ -197,19 +234,20 @@ function runIndicators(features: URLFeatures, urlStr: string): AnalysisIndicator
     weight: 25,
   });
 
-  // 10. Homograph/typosquatting
-  const typosquat = LEGITIMATE_DOMAINS.some(legit => {
-    const legitBase = legit.split(".")[0];
-    const domainBase = features.domain.split(".")[0];
-    if (domainBase === legitBase) return false;
-    // Simple Levenshtein-like check
-    if (domainBase.includes(legitBase) && domainBase !== legitBase) return true;
-    if (legitBase.includes(domainBase) && domainBase !== legitBase) return true;
-    return false;
-  });
+  // 10. Homograph / typosquatting (Levenshtein distance ≤ 2 vs top brands)
+  const parts = features.domain.split(".");
+  const regBase = parts.slice(-2)[0] || "";
+  const subLabels = parts.slice(0, Math.max(0, parts.length - 2));
+  const brandHit = looksLikeBrand(regBase);
+  const subBrandHit = subLabels.map(looksLikeBrand).find(Boolean) || null;
+  const typosquat = !!(brandHit || subBrandHit);
   indicators.push({
     name: "Brand Impersonation",
-    description: "Domain resembles a legitimate brand (possible typosquatting)",
+    description: brandHit
+      ? `Domain "${regBase}" closely resembles "${brandHit}" (typosquatting)`
+      : subBrandHit
+        ? `Subdomain references "${subBrandHit}" but domain is unrelated`
+        : "No brand impersonation detected",
     severity: "critical",
     detected: typosquat,
     weight: 30,
@@ -231,6 +269,20 @@ function runIndicators(features: URLFeatures, urlStr: string): AnalysisIndicator
     severity: "low",
     detected: features.queryParams > 4,
     weight: 5,
+  });
+
+  // 13. Free-hosting phish pattern (e.g. paypal-login.firebaseapp.com)
+  const regDomain = parts.slice(-2).join(".");
+  const onFreeHost = FREE_HOSTING_PROVIDERS.includes(regDomain);
+  const freeHostAbuse = onFreeHost && (features.suspiciousKeywords.length > 0 || !!subBrandHit);
+  indicators.push({
+    name: "Free-Hosting Phish Pattern",
+    description: onFreeHost
+      ? `Hosted on free provider "${regDomain}" with brand/keyword abuse in subdomain`
+      : "Not hosted on a flagged free provider",
+    severity: "high",
+    detected: freeHostAbuse,
+    weight: 25,
   });
 
   return indicators;
@@ -297,6 +349,7 @@ const ML_WEIGHTS = {
   urlEncodingAbuse: 1.0,
   manyParams: 0.3,
   legitimateBoost: -3.5,
+  freeHostingAbuse: 1.9,
 };
 
 function sigmoid(x: number) {
@@ -323,6 +376,7 @@ function runMLModel(
   z += ML_WEIGHTS.brandImpersonation * get("Brand Impersonation");
   z += ML_WEIGHTS.urlEncodingAbuse * get("URL Encoding Abuse");
   z += ML_WEIGHTS.manyParams * get("Excessive Parameters");
+  z += ML_WEIGHTS.freeHostingAbuse * get("Free-Hosting Phish Pattern");
   if (isLegitimate) z += ML_WEIGHTS.legitimateBoost;
 
   return sigmoid(z);
